@@ -1,0 +1,8 @@
+# Item configuration example - Service
+id: "item-001"
+type: "service"
+description: "Hosting & Maintenance"
+detail: "www.acme.com"  # Optional secondary line
+quantity: 1
+rate: 10.00
+unit: "month"  # Optional display unit

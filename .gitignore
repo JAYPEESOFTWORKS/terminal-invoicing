@@ -1,0 +1,41 @@
+# Node modules
+node_modules/
+
+# Logs
+*.log
+logs/
+
+# Config files with sensitive data
+config/email.yaml
+config/state.yaml
+
+# Generated invoices and archives
+invoices/*.pdf
+history/
+
+# Customer and business data
+customers/*.yaml
+items/*.yaml
+invoices/*.yaml
+
+# Keep example files
+!examples/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+
+# Test files
+test-data/
+temp/

@@ -1,0 +1,11 @@
+# Customer configuration example
+id: "customer-001"
+name: "Cool Customer, Inc"
+# Lines can be anything...
+info_lines:
+  - "Accounts Payable"
+  - "123 Their St"
+  - "City, ST zip"
+  - "United States"
+billing_email: "where_to_send_invoice@email.com"
+payment_terms_days: 30  # Net 30

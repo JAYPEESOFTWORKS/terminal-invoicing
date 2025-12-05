@@ -1,0 +1,9 @@
+# Company configuration example
+name: "Your Company"
+info_lines:
+  - "123 Your St"
+  - "City, State Zip"
+  - "251-555-1212"
+  - "Anything you want"
+logo_path: "assets/logo.png"  # Relative to project root
+email: "you@yourcompany.com"

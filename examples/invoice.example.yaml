@@ -1,0 +1,26 @@
+# Invoice definition example
+id: "recurring-client-a"
+name: "Example Recurring Invoice"
+customer_id: "customer-001"
+
+items:
+  - "item-001"
+  - "item-002"
+  - "thank-you-note"  # Can include comment items
+
+# Optional: Override layout for this invoice
+layout: "default"
+
+# Optional: Override layout configuration
+# layout_config:
+#   primary_color: "#ff0000"
+
+schedule:
+  day_of_month: 1  # Generate and send on 1st of each month
+  enabled: true
+
+# Optional: Mailgun overrides
+# mailgun:
+#   from: "billing@example.com"
+#   subject_override: "Custom subject"
+#   body_override: "Custom email body"

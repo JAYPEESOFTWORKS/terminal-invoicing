@@ -1,0 +1,16 @@
+.
+assets
+bin
+config
+customers
+email-providers
+examples
+history
+invoices
+items
+layouts
+src
+src/commands
+src/lib
+src/utils
+src/{commands,lib,utils}

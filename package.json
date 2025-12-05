@@ -1,0 +1,34 @@
+{
+  "name": "terminal-invoicing",
+  "version": "1.0.0",
+  "description": "Professional command-line invoicing system with automated recurring billing",
+  "main": "src/index.js",
+  "bin": {
+    "terminal-invoicing": "./bin/terminv.js"
+  },
+  "scripts": {
+    "start": "node bin/terminv.js",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": ["invoice", "billing", "cli", "automation", "pdf", "mailgun"],
+  "author": "Jason Phillips <admin@jaypeesoftworks.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "pdfkit": "^0.14.0",
+    "commander": "^11.0.0",
+    "js-yaml": "^4.1.0",
+    "mailgun.js": "^9.0.0",
+    "form-data": "^4.0.0",
+    "crontab": "^1.0.1",
+    "date-fns": "^2.30.0",
+    "archiver": "^6.0.0",
+    "winston": "^3.11.0",
+    "joi": "^17.11.0",
+    "inquirer": "^8.2.5",
+    "adm-zip": "^0.5.10"
+  },
+  "devDependencies": {}
+}
