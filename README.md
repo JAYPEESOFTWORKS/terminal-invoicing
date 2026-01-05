@@ -31,6 +31,8 @@ npm link  # Optional: makes 'Terminal Invoicing' available globally
 
 ## Quick Start
 
+export TERMINAL_INVOICING_ROOT=\path\to\data\folder
+
 ### 1. Initialize
 
 ```bash
