@@ -287,6 +287,6 @@ Terminal Invoicing email providers
 
 **Provider not found**: Ensure file is in `email-providers/` directory.
 
-**Send failures**: Check `~/.Terminal Invoicing/logs/error.log` for details.
+**Send failures**: Check `~/.terminal_invoicing/logs/error.log` for details.
 
 **Authentication errors**: Verify API keys and credentials in `config/email.yaml`.

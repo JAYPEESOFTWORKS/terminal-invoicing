@@ -243,7 +243,7 @@ module.exports = layout;
 
 **Layout not found**: Ensure the file is in `layouts/` directory and exports the correct structure.
 
-**PDF rendering issues**: Check logs at `~/.Terminal Invoicing/logs/error.log` for detailed error messages.
+**PDF rendering issues**: Check logs at `~/.terminal_invoicing/logs/error.log` for detailed error messages.
 
 **Missing fonts**: PDFKit includes Helvetica by default. For custom fonts, use:
 

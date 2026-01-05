@@ -360,7 +360,7 @@ Terminal Invoicing uses cron for automated invoice generation.
 1. Define recurring invoices with `schedule.day_of_month` and `schedule.enabled: true`
 2. Run `Terminal Invoicing schedule setup` to create cron jobs
 3. Invoices automatically generate and send on the specified day each month
-4. Logs are saved to `~/.Terminal Invoicing/logs/cron.log`
+4. Logs are saved to `~/.terminal_invoicing/logs/cron.log`
 
 ### Cron Schedule Format
 
@@ -389,20 +389,20 @@ This provides a complete audit trail of all invoices.
 
 1. Check cron is installed: `which crontab`
 2. Verify jobs are added: `crontab -l | grep Terminal Invoicing`
-3. Check cron logs: `tail -f ~/.Terminal Invoicing/logs/cron.log`
+3. Check cron logs: `tail -f ~/.terminal_invoicing/logs/cron.log`
 4. Ensure binary path is correct in cron entries
 
 ### Email not sending
 
 1. Test email configuration: `Terminal Invoicing email test`
 2. Verify Mailgun API key and domain
-3. Check `~/.Terminal Invoicing/logs/error.log` for details
+3. Check `~/.terminal_invoicing/logs/error.log` for details
 
 ### PDF generation issues
 
 1. Ensure logo file exists at specified path
 2. Check item data is valid (no missing fields)
-3. Review logs: `~/.Terminal Invoicing/logs/combined.log`
+3. Review logs: `~/.terminal_invoicing/logs/combined.log`
 
 ## Development
 

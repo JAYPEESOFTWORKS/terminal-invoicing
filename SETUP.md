@@ -96,7 +96,7 @@
    - Generate the invoice on the 1st of each month at 9:00 AM
    - Send it via email
    - Archive everything in `history/`
-   - Log to `~/.Terminal Invoicing/logs/cron.log`
+   - Log to `~/.terminal_invoicing/logs/cron.log`
 
 10. **Verify cron is set up**:
     ```bash
@@ -155,12 +155,12 @@ terminal-invoicing/
 1. Test configuration: `terminv email test`
 2. Check Mailgun dashboard for delivery logs
 3. Verify domain is verified in Mailgun
-4. Check logs: `tail -f ~/.Terminal Invoicing/logs/error.log`
+4. Check logs: `tail -f ~/.terminal_invoicing/logs/error.log`
 
 ### Cron not running
 1. Verify cron is installed: `which crontab`
 2. Check crontab: `crontab -l | grep Terminal Invoicing`
-3. Check logs: `tail -f ~/.Terminal Invoicing/logs/cron.log`
+3. Check logs: `tail -f ~/.terminal_invoicing/logs/cron.log`
 4. Re-setup: `Terminal Invoicing schedule setup`
 
 ### Invoice number issues
@@ -179,7 +179,7 @@ terminal-invoicing/
 ## Support
 
 For issues or questions:
-- Check logs: `~/.Terminal Invoicing/logs/`
+- Check logs: `~/.terminal_invoicing/logs/`
 - Read docs: `README.md`
 - Review examples: `examples/`
 

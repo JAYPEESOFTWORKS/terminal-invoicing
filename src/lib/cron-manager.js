@@ -38,7 +38,7 @@ class CronManager {
    * @returns {string} Log path
    */
   getLogPath() {
-    const logDir = path.join(os.homedir(), '.Terminal Invoicing', 'logs');
+    const logDir = path.join(os.homedir(), './terminal_invoicing', 'logs');
     ensureDir(logDir);
     return path.join(logDir, 'cron.log');
   }

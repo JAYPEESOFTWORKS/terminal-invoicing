@@ -132,11 +132,11 @@ function listFiles(dirPath, extension = null) {
 }
 
 /**
- * Get the data directory path (~/.Terminal Invoicing)
+ * Get the data directory path (~/.terminal_invoicing)
  * @returns {string} Data directory path
  */
 function getDataDir() {
-  return path.join(os.homedir(), '.Terminal Invoicing');
+  return path.join(os.homedir(), '.terminal_invoicing');
 }
 
 /**

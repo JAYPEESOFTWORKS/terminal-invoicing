@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 
 // Ensure log directory exists
-const logDir = path.join(os.homedir(), '.Terminal Invoicing', 'logs');
+const logDir = path.join(os.homedir(), '.terminal_invoicing', 'logs');
 if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir, { recursive: true });
 }
