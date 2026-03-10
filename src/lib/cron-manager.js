@@ -17,6 +17,13 @@ class CronManager {
   /**
    * Get the path to the Terminal Invoicing binary
    * @returns {string} Binary path
+   *
+   * Cron's environment is very sparse – there may be no PATH at all – so when
+   * this method is called from a job the `which` lookup will typically fail
+   * and we fall back to the copy of the script that lives in the project
+   * directory.  That fallback path is relative to the project root, however, so
+   * a cron job must either `cd` into that directory later (see setup()) or
+   * supply a fully‑qualified path itself.
    */
   getBinaryPath() {
     // Try to find the installed binary
@@ -27,6 +34,7 @@ class CronManager {
       if (which) return which;
     } catch (err) {
       // Not in PATH
+      logger.debug('getBinaryPath: `which` failed, falling back to project bin');
     }
     
     // Fallback to local bin
@@ -88,14 +96,30 @@ class CronManager {
           let addedCount = 0;
 
           enabledInvoices.forEach(invoice => {
-            const command = `${binPath} invoice generate ${invoice.id} --quiet >> ${logPath} 2>&1`;
-            const schedule = `0 9 ${invoice.day} * *`; // 9:00 AM on specified day
-            const comment = `${this.marker}: ${invoice.name}`;
+            // build a fully‑qualified command string that works when cron runs with
+          // a bare environment and unpredictable working directory.  cron jobs
+          // are executed from the user's home (or "/" on some systems), so any
+          // relative paths or reliance on `process.cwd()` inside the script will
+          // fail.  we `cd` into the project root and explicitly invoke node using
+          // `process.execPath` rather than relying on a shebang/`env` call.
+          const projectDir = resolveProjectPath();
+          const nodeExec = process.execPath; // absolute path to the running node binary
 
-            tab.create(command, schedule, comment);
-            addedCount++;
-            
-            logger.info(`Added cron job: ${invoice.name} (day ${invoice.day})`);
+          // make sure the binary path is absolute (getBinaryPath might return a
+          // local relative path when `which` fails in cron).  resolve it against the
+          // project directory so it still works when cron starts in / or ~.
+          const resolvedBin = path.isAbsolute(binPath)
+            ? binPath
+            : path.join(projectDir, binPath);
+
+          const command = `cd ${projectDir} && ${nodeExec} ${resolvedBin} invoice generate ${invoice.id} --quiet >> ${logPath} 2>&1`;
+          const schedule = `0 9 ${invoice.day} * *`; // 9:00 AM on specified day
+          const comment = `${this.marker}: ${invoice.name}`;
+
+          tab.create(command, schedule, comment);
+          addedCount++;
+
+          logger.info(`Added cron job: ${invoice.name} (day ${invoice.day})`);
           });
 
           // Save crontab
