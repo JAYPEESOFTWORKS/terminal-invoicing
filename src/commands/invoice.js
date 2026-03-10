@@ -177,7 +177,7 @@ async function generateInvoice(invoiceId, options) {
 
         const result = await invoiceProcessor.processInvoice(invoiceId, {
             dryRun: options.dryRun,
-            noSend: options.noSend,
+            noSend: !options.send,  // --no-send flag sets options.send to false
             output: options.output,
         });
 
