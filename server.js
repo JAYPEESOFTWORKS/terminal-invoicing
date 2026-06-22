@@ -382,34 +382,102 @@ app.put   ("/api/invoices/:id", wrap(async (req, res) => { const d = { ...req.bo
 app.delete("/api/invoices/:id", wrap(async (req, res) => { if (!deleteYAMLFile("invoices", req.params.id)) return res.status(404).json({ error: "Not found" }); res.json({ ok: true }); }));
 
 app.post("/api/invoices/:id/generate", wrap(async (req, res) => {
-  const inv = readYAMLFile("invoices", req.params.id);
-  if (!inv) return res.status(404).json({ error: "Invoice definition not found" });
+  const { addDays }    = require("date-fns");
+  const { formatDate, getMonthYear, roundCurrency, toISOString } = require(path.join(__dirname, "src/utils/formatters"));
+  const pdfGenerator   = require(path.join(__dirname, "src/lib/pdf-generator"));
+  const { resolveProjectPath, ensureDir } = require(path.join(__dirname, "src/utils/file-utils"));
 
-  const opts = { dryRun: !!req.body.dryRun, noSend: !!req.body.noSend, preview: !!req.body.preview };
+  const invDef = readYAMLFile("invoices", req.params.id);
+  if (!invDef) return res.status(404).json({ error: "Invoice definition not found" });
 
-  // FE-format invoices have items as objects [{item_id, qty}] and no name field.
-  // The CLI processor requires items as string IDs and a name field.
-  // Write a normalised temp YAML, process it, then clean up.
-  const isFEFormat = Array.isArray(inv.items) && inv.items.length > 0 && typeof inv.items[0] === "object";
-  if (isFEFormat || !inv.name) {
-    const tempId = `_tmp_${req.params.id}`;
-    const normalised = {
-      ...inv,
-      name: inv.name || inv.id,
-      items: (inv.items || []).map(li => (typeof li === "string" ? li : (li.item_id || li))),
-    };
-    writeYAMLFile("invoices", tempId, normalised);
-    try {
-      const result = await invoiceProcessor.processInvoice(tempId, opts);
-      res.json(result);
-    } finally {
-      deleteYAMLFile("invoices", tempId);
-    }
-    return;
+  const opts = { dryRun: !!req.body.dryRun, noSend: !!req.body.noSend };
+
+  // If it's pure CLI format (items are strings, has name), delegate to the CLI processor
+  const isCLIFormat = Array.isArray(invDef.items) && invDef.items.every(i => typeof i === "string") && !!invDef.name;
+  if (isCLIFormat) {
+    const result = await invoiceProcessor.processInvoice(req.params.id, opts);
+    return res.json(result);
   }
 
-  const result = await invoiceProcessor.processInvoice(req.params.id, opts);
-  res.json(result);
+  // ── Inline generation for FE-format invoices (bypasses Joi schema validation) ──
+
+  // Load raw customer (no Joi)
+  const rawCustomer = readYAMLFile("customers", invDef.customer_id);
+  if (!rawCustomer) return res.status(404).json({ error: `Customer not found: ${invDef.customer_id}` });
+
+  // Load raw items — support both FE [{item_id,qty}] and CLI ["id"] formats
+  const items = (invDef.items || []).map(li => {
+    const itemId   = typeof li === "string" ? li : (li.item_id || li);
+    const qty      = typeof li === "string" ? null : (li.qty || 1);
+    const catalog  = readYAMLFile("items", itemId);
+    if (!catalog) return null;
+    const rate     = catalog.unit_price ?? catalog.rate ?? 0;
+    const quantity = qty ?? catalog.quantity ?? 1;
+    return { type: catalog.type || "service", description: catalog.name || catalog.description || itemId, detail: catalog.detail || null, quantity, rate, amount: roundCurrency(rate * quantity) };
+  }).filter(Boolean);
+
+  const subtotal = items.reduce((s, i) => s + i.amount, 0);
+  const totals   = { subtotal, tax: 0, total: roundCurrency(subtotal) };
+
+  // Load raw company (no Joi)
+  const rawCompany = readYAMLFile("config", "company") || {};
+  const company = {
+    name:       rawCompany.name || "",
+    email:      rawCompany.email || "",
+    logo_path:  rawCompany.logo_path || "",
+    info_lines: rawCompany.info_lines || [rawCompany.address, rawCompany.city_state_zip, rawCompany.phone, rawCompany.email].filter(Boolean),
+  };
+
+  const invoiceDate  = new Date();
+  const payTerms     = rawCustomer.payment_terms_days || invDef.due_days || 30;
+  const dueDate      = addDays(invoiceDate, payTerms);
+  const invoiceNumber = opts.dryRun ? "PREVIEW" : cliConfig.incrementInvoiceNumber();
+
+  const invoiceData = {
+    company,
+    customer: {
+      name:          rawCustomer.name,
+      billing_email: rawCustomer.billing_email || rawCustomer.email || "",
+      info_lines:    rawCustomer.info_lines || [rawCustomer.address, rawCustomer.city_state_zip, rawCustomer.email].filter(Boolean),
+    },
+    invoice: {
+      number:        invoiceNumber.toString(),
+      date:          formatDate(invoiceDate),
+      due_date:      formatDate(dueDate),
+      invoice_month: getMonthYear(invoiceDate),
+    },
+    items,
+    totals,
+    layout:      invDef.layout || "default",
+    layoutConfig: {
+      font_size_base: 10, font_size_header: 24, font_size_metadata: 10,
+      line_height: 12, item_row_height: 25,
+      primary_color: "#000000", text_color: "#000000", line_color: "#000000",
+      font_family: "Helvetica",
+      margins: { top: 72, bottom: 72, left: 72, right: 72 },
+    },
+    mailgun: invDef.mailgun || {},
+  };
+
+  const pdfPath = resolveProjectPath("invoices", `invoice-${invoiceNumber}.pdf`);
+  await pdfGenerator.generate(invoiceData, pdfPath);
+
+  let deliveryInfo = null;
+  if (!opts.noSend && !opts.dryRun) {
+    const emailConfig   = cliConfig.loadEmail();
+    const emailTemplate = cliConfig.loadEmailTemplate();
+    deliveryInfo = await emailManager.sendInvoice(emailConfig, emailTemplate, invoiceData, pdfPath);
+  }
+
+  let archivePath = null;
+  if (!opts.dryRun) {
+    archivePath = await invoiceProcessor.createArchive(invoiceNumber, invoiceDate, invoiceData, invDef, rawCustomer, items, pdfPath, deliveryInfo);
+    const state = cliConfig.loadState();
+    state.last_run = toISOString(new Date());
+    cliConfig.saveState(state);
+  }
+
+  res.json({ success: true, invoice_number: invoiceNumber, pdfPath, archivePath, deliveryInfo, total: totals.total });
 }));
 
 // ─── Schedule ─────────────────────────────────────────────────────────────────
