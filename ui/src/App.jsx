@@ -54,9 +54,11 @@ const emailProviders = [
 // ─── Utilities ─────────────────────────────────────────────────────────────────
 const fmt = n => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2 });
 const fmtDate = s => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const itemPrice = it => it ? (it.unit_price ?? it.rate ?? 0) : 0;
+const itemName  = it => it ? (it.name || it.description || it.id || "") : "";
 const calcTotal = (lineItems, catalog) => lineItems.reduce((s, li) => {
   const it = catalog.find(i => i.id === li.item_id);
-  return s + (it ? it.unit_price * li.qty : 0);
+  return s + itemPrice(it) * (li.qty ?? it?.quantity ?? 1);
 }, 0);
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -711,8 +713,8 @@ function Select({ label, value, onChange, options }) {
 
 function Modal({ title, onClose, children, wide }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000a", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={onClose}>
-      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 28, width: "100%", maxWidth: wide ? 720 : 480, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+    <div style={{ position: "fixed", inset: 0, background: "#000a", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 28, width: "100%", maxWidth: wide ? 720 : 480, maxHeight: "90vh", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <h3 style={{ margin: 0, fontSize: 16, color: C.text }}>{title}</h3>
           <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer", lineHeight: 1 }}>×</button>
@@ -971,10 +973,10 @@ function Items({ items, saveItem, deleteItem, toast, onImport }) {
         <Table
           cols={[
             { key: "id", label: "ID", mono: true, dim: true },
-            { key: "name", label: "Name" },
+            { key: "name", label: "Name", render: (v, row) => itemName(row) },
             { key: "type", label: "Type", render: v => <Badge color={v === "service" ? "accent" : "muted"}>{v}</Badge> },
-            { key: "unit_price", label: "Unit Price", right: true, mono: true, render: v => fmt(v) },
-            { key: "description", label: "Description", dim: true },
+            { key: "unit_price", label: "Unit Price", right: true, mono: true, render: (v, row) => fmt(itemPrice(row)) },
+            { key: "description", label: "Description", dim: true, render: (v, row) => row.detail || v },
             { key: "actions", label: "", render: (_, row) => (
               <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
                 <Btn small onClick={() => exportYAML(row)}>↓ YAML</Btn>
@@ -1092,14 +1094,14 @@ function Invoices({ invoices, saveInvoice, deleteInvoice, generateInvoice, custo
               <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Line Items</div>
               {lineItems.map((li, i) => (
                 <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 80px auto", gap: 8, marginBottom: 8, alignItems: "flex-end" }}>
-                  <Select value={li.item_id} onChange={v => updateLine(i, "item_id", v)} options={items.map(it => ({ value: it.id, label: `${it.name} — ${fmt(it.unit_price)}` }))} />
+                  <Select value={li.item_id} onChange={v => updateLine(i, "item_id", v)} options={items.map(it => ({ value: it.id, label: `${itemName(it)} — ${fmt(itemPrice(it))}` }))} />
                   <Input value={String(li.qty)} onChange={v => updateLine(i, "qty", v)} type="number" />
                   <Btn small variant="danger" onClick={() => removeLine(i)}>✕</Btn>
                 </div>
               ))}
               <Btn small onClick={addLine}>+ Add Line</Btn>
               <div style={{ marginTop: 10, textAlign: "right", fontFamily: "monospace", color: C.accentText, fontSize: 15 }}>
-                Total: {fmt(lineItems.reduce((s, li) => { const it = items.find(x => x.id === li.item_id); return s + (it ? it.unit_price * li.qty : 0); }, 0))}
+                Total: {fmt(lineItems.reduce((s, li) => { const it = items.find(x => x.id === li.item_id); return s + itemPrice(it) * (li.qty || 1); }, 0))}
               </div>
             </div>
             <Input label="Invoice Notes" value={form.notes} onChange={v => setForm(p => ({ ...p, notes: v }))} rows={2} />

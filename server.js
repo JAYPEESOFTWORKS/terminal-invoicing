@@ -469,19 +469,20 @@ app.get("/api/invoices/:id/pdf-preview", wrap(async (req, res) => {
 
   // Build items — FE format: [{item_id, qty}]; CLI format may be string IDs
   const items = (invDef.items || []).map(li => {
-    const itemId  = (typeof li === "string") ? li : (li.item_id || li);
-    const qty     = (typeof li === "string") ? 1  : (li.qty || 1);
-    const catalog = readYAMLFile("items", itemId);
+    // Support CLI format (string item ID) and FE format ({item_id, qty})
+    const itemId   = (typeof li === "string") ? li : (li.item_id || li);
+    const fqty     = (typeof li === "string") ? null : (li.qty || 1);
+    const catalog  = readYAMLFile("items", itemId);
     if (!catalog) return null;
-    // Support both FE (unit_price) and CLI (rate) field names
-    const rate    = catalog.unit_price ?? catalog.rate ?? 0;
-    const quantity = catalog.quantity || qty;
-    const amount  = rate * qty;
+    // CLI items: rate+quantity in item file; FE items: unit_price+qty in line item
+    const rate     = catalog.unit_price ?? catalog.rate ?? 0;
+    const quantity = fqty ?? catalog.quantity ?? 1;
+    const amount   = rate * quantity;
     return {
       type:        catalog.type || "service",
       description: catalog.name || catalog.description || itemId,
       detail:      catalog.detail || null,
-      quantity:    qty,
+      quantity,
       rate,
       amount,
     };
@@ -489,24 +490,27 @@ app.get("/api/invoices/:id/pdf-preview", wrap(async (req, res) => {
 
   const total = items.reduce((s, i) => s + i.amount, 0);
 
-  // Read raw company YAML (FE stores address/city_state_zip/phone, not info_lines)
+  // Support both CLI format (info_lines) and FE format (address/city_state_zip/phone)
   const rawCompany = readYAMLFile("config", "company") || {};
   const companyData = {
     name:       rawCompany.name || "",
     logo_path:  rawCompany.logo_path || "",
     email:      rawCompany.email || "",
-    info_lines: [rawCompany.address, rawCompany.city_state_zip, rawCompany.phone, rawCompany.email].filter(Boolean),
+    info_lines: rawCompany.info_lines ||
+                [rawCompany.address, rawCompany.city_state_zip, rawCompany.phone, rawCompany.email].filter(Boolean),
   };
 
   const today   = new Date();
-  const dueDate = addDays(today, invDef.due_days || 30);
+  const dueDate = addDays(today, (customer.payment_terms_days || invDef.due_days) || 30);
 
   const invoiceData = {
     company: companyData,
     customer: {
       name:          customer.name,
-      billing_email: customer.email || customer.billing_email || "",
-      info_lines:    [customer.address, customer.city_state_zip, customer.email].filter(Boolean),
+      billing_email: customer.billing_email || customer.email || "",
+      // Support both CLI format (info_lines) and FE format (address/city_state_zip/email)
+      info_lines:    customer.info_lines ||
+                     [customer.address, customer.city_state_zip, customer.email].filter(Boolean),
     },
     invoice: {
       number:        "PREVIEW",
