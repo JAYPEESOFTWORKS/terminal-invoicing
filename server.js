@@ -396,24 +396,44 @@ app.delete("/api/schedule",       wrap(async (req, res) => { await cronManager.r
 // ─── History ──────────────────────────────────────────────────────────────────
 app.get("/api/history", wrap(async (req, res) => {
   const raw = await invoiceProcessor.listArchives();
-  // Normalize whatever shape listArchives() returns into what the UI expects
-  const normalized = (raw || []).map(a => ({
-    id:           a.invoice_number || a.id || a.number || path.basename(a.path || a.archive_path || "", ".zip"),
-    invoice_def:  a.invoice_id || a.invoice_def || "",
-    customer:     a.customer_name || a.customer || (typeof a.customer === "object" ? a.customer?.name : "") || "",
-    date:         a.invoice_date || a.date || "",
-    due:          a.due_date || a.due || "",
-    total:        a.total_amount || a.total || 0,
-    status:       a.status || "sent",
-    pdf:          a.pdf !== undefined ? a.pdf : true,
-    archive_path: a.path || a.archive_path || "",
-  }));
+  // Each entry from listArchives() has: { invoiceNumber, yearMonth, path, size, createdAt }
+  // We open each zip to read invoice-params.yaml for the full data.
+  const AdmZip = require("adm-zip");
+  const normalized = (raw || []).map(a => {
+    let customer = "", date = "", due = "", total = 0, invoiceDef = "";
+    try {
+      const zip = new AdmZip(a.path);
+      const paramsEntry = zip.getEntry("invoice-params.yaml");
+      if (paramsEntry) {
+        const params = yaml.load(paramsEntry.getData().toString("utf8"));
+        customer  = params.customer?.name || "";
+        date      = params.invoice_data?.date || "";
+        due       = params.invoice_data?.due_date || "";
+        total     = params.invoice_data?.total || 0;
+        invoiceDef = params.invoice_definition?.id || "";
+      }
+    } catch (e) { /* zip unreadable — use fallback values */ }
+    return {
+      id:           `INV-${a.invoiceNumber}`,
+      invoice_def:  invoiceDef,
+      customer,
+      date,
+      due,
+      total,
+      status:       "sent",
+      pdf:          true,
+      archive_path: a.path,
+    };
+  });
   res.json(normalized);
 }));
 app.get("/api/history/:id/export", wrap(async (req, res) => {
-  const archive = await invoiceProcessor.findArchive(req.params.id);
+  // req.params.id is "INV-2513" — extract the number to find the archive
+  const num = parseInt(req.params.id.replace(/[^0-9]/g, ""));
+  const raw = await invoiceProcessor.listArchives();
+  const archive = raw.find(a => a.invoiceNumber === num);
   if (!archive) return res.status(404).json({ error: "Not found" });
-  res.download(archive.path || archive.archive_path, `${req.params.id}.zip`);
+  res.download(archive.path, `${req.params.id}.zip`);
 }));
 
 // ─── Email ────────────────────────────────────────────────────────────────────

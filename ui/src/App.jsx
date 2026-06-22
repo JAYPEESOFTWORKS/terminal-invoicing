@@ -13,7 +13,7 @@ const C = {
 // When running via `node server.js` the UI is on the same origin so API_BASE="/api".
 // During Vite dev on a different port set VITE_API_URL=http://localhost:4000/api
 // Safe in both ESM (Vite) and non-module (artifact/CRA) environments
-const API_BASE = "http://localhost:4000/api";
+const API_BASE = "/api";
 
 async function apiFetch(method, path, body) {
   const res = await fetch(`${API_BASE}${path}`, {

@@ -53,7 +53,12 @@ const emailProviders = [
 
 // ─── Utilities ─────────────────────────────────────────────────────────────────
 const fmt = n => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2 });
-const fmtDate = s => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const fmtDate = s => {
+  if (!s) return "—";
+  // Handle both ISO dates ("2026-06-01") and natural dates ("June 1, 2026")
+  const d = s.includes("-") && s.length === 10 ? new Date(s + "T12:00:00") : new Date(s);
+  return isNaN(d) ? s : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
 const calcTotal = (lineItems, catalog) => lineItems.reduce((s, li) => {
   const it = catalog.find(i => i.id === li.item_id);
   return s + (it ? it.unit_price * li.qty : 0);
