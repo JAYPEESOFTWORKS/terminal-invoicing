@@ -384,7 +384,7 @@ app.delete("/api/invoices/:id", wrap(async (req, res) => { if (!deleteYAMLFile("
 app.post("/api/invoices/:id/generate", wrap(async (req, res) => {
   const inv = readYAMLFile("invoices", req.params.id);
   if (!inv) return res.status(404).json({ error: "Invoice definition not found" });
-  const result = await invoiceProcessor.processInvoice(inv, { dryRun: !!req.body.dryRun, noSend: !!req.body.noSend, preview: !!req.body.preview });
+  const result = await invoiceProcessor.processInvoice(req.params.id, { dryRun: !!req.body.dryRun, noSend: !!req.body.noSend, preview: !!req.body.preview });
   res.json(result);
 }));
 

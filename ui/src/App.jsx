@@ -53,7 +53,11 @@ const emailProviders = [
 
 // ─── Utilities ─────────────────────────────────────────────────────────────────
 const fmt = n => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2 });
-const fmtDate = s => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const fmtDate = s => {
+  if (!s) return "";
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + "T12:00:00") : new Date(s);
+  return isNaN(d.getTime()) ? s : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
 const itemPrice = it => it ? (it.unit_price ?? it.rate ?? 0) : 0;
 const itemName  = it => it ? (it.name || it.description || it.id || "") : "";
 const calcTotal = (lineItems, catalog) => lineItems.reduce((s, li) => {
