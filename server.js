@@ -436,6 +436,24 @@ app.get("/api/history/:id/export", wrap(async (req, res) => {
   res.download(archive.path, `${req.params.id}.zip`);
 }));
 
+// ─── History PDF preview (streams invoice.pdf from the archive zip) ──────────
+app.get("/api/history/:id/pdf-preview", wrap(async (req, res) => {
+  const AdmZip = require("adm-zip");
+  const num    = parseInt(req.params.id.replace(/[^0-9]/g, ""), 10);
+  const raw    = await invoiceProcessor.listArchives();
+  const archive = raw.find(a => a.invoiceNumber === num);
+  if (!archive) return res.status(404).json({ error: "Archive not found" });
+
+  const zip   = new AdmZip(archive.path);
+  const entry = zip.getEntry("invoice.pdf");
+  if (!entry) return res.status(404).json({ error: "PDF not found in archive" });
+
+  const pdfData = entry.getData();
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `inline; filename="${req.params.id}.pdf"`);
+  res.send(pdfData);
+}));
+
 // ─── PDF Preview (streams a real PDF using the CLI pdf-generator) ────────────
 app.get("/api/invoices/:id/pdf-preview", wrap(async (req, res) => {
   const os      = require("os");

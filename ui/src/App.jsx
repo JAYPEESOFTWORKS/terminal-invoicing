@@ -412,7 +412,11 @@ function InvoicePDFPreview_UNUSED({ invoice, customer, lineItems, catalog, confi
 // ─── PDF Preview Panel ─────────────────────────────────────────────────────────
 function PDFPreview({ invoice, customers, items: catalog, config, onClose }) {
   const customer = customers.find(c => c.id === invoice?.customer_id);
-  const previewUrl = invoice?.id ? `/api/invoices/${invoice.id}/pdf-preview` : null;
+  const previewUrl = invoice?.id
+    ? (invoice._isHistory
+        ? `/api/history/${invoice.id}/pdf-preview`
+        : `/api/invoices/${invoice.id}/pdf-preview`)
+    : null;
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 1000, display: "flex" }} onClick={onClose}>
@@ -1189,7 +1193,7 @@ function History({ history, customers, items: catalog, config, toast, onPreview 
 
   // Build a synthetic invoice from a history entry for preview
   const buildPreviewInv = h => {
-    return { id: h.id, customer_id: customers.find(c => c.name === h.customer)?.id || "", items: [], due_days: 30, notes: "", layout: "default", date: h.date, total: h.total };
+    return { id: h.id, _isHistory: true, customer_id: customers.find(c => c.name === h.customer)?.id || "", items: [], due_days: 30, notes: "", layout: "default", date: h.date, total: h.total };
   };
 
   return (
