@@ -155,17 +155,12 @@ function saveUsers(users) {
 }
 
 // ─── CLI lib imports ──────────────────────────────────────────────────────────
-const ConfigManager    = require(path.join(__dirname, "src/lib/config-manager"));
-const InvoiceProcessor = require(path.join(__dirname, "src/lib/invoice-processor"));
-const LayoutManager    = require(path.join(__dirname, "src/lib/layout-manager"));
-const EmailManager     = require(path.join(__dirname, "src/lib/email-manager"));
-const CronManager      = require(path.join(__dirname, "src/lib/cron-manager"));
+const cliConfig        = require(path.join(__dirname, "src/lib/config-manager"));
+const invoiceProcessor = require(path.join(__dirname, "src/lib/invoice-processor"));
+const layoutManager    = require(path.join(__dirname, "src/lib/layout-manager"));
+const emailManager     = require(path.join(__dirname, "src/lib/email-manager"));
+const cronManager      = require(path.join(__dirname, "src/lib/cron-manager"));
 
-const cliConfig        = new ConfigManager(DATA_ROOT);
-const invoiceProcessor = new InvoiceProcessor(DATA_ROOT, cliConfig);
-const layoutManager    = new LayoutManager(DATA_ROOT);
-const emailManager     = new EmailManager(DATA_ROOT, cliConfig);
-const cronManager      = new CronManager(DATA_ROOT, cliConfig);
 
 // ─── YAML file helpers ────────────────────────────────────────────────────────
 const yaml = require("js-yaml");
