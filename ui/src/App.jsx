@@ -1063,7 +1063,7 @@ function Invoices({ invoices, saveInvoice, deleteInvoice, generateInvoice, custo
             { key: "total", label: "Est. Amount", right: true, mono: true, render: (_, row) => fmt(getTotal(row)) },
             { key: "actions", label: "", render: (_, row) => (
               <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
-                <Btn small onClick={() => onPreview(row)}>⬡ PDF</Btn>
+                <Btn small onClick={() => onPreview(row)}>⬡ Preview</Btn>
                 <Btn small variant="success" onClick={() => openGenerate(row)}>▶ Generate</Btn>
                 <Btn small onClick={() => exportYAML(row)}>↓ YAML</Btn>
                 <Btn small onClick={() => openEdit(row)}>Edit</Btn>
@@ -1212,7 +1212,7 @@ function History({ history, customers, items: catalog, config, toast, onPreview 
             { key: "pdf", label: "PDF", render: v => v ? <Badge color="accent">✓</Badge> : <span style={{ color: C.muted, fontSize: 12 }}>—</span> },
             { key: "actions", label: "", render: (_, row) => (
               <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
-                <Btn small onClick={() => onPreview(buildPreviewInv(row))}>⬡ PDF</Btn>
+                <Btn small onClick={() => onPreview(buildPreviewInv(row))}>⬡ Preview</Btn>
                 <Btn small onClick={() => setSelected(row)}>Show</Btn>
                 <Btn small onClick={() => toast(`Exporting ${row.id}.zip…`, "info")}>Export</Btn>
               </div>

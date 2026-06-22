@@ -1,6 +1,9 @@
 # Node modules
 node_modules/
 
+# copy of onsite data
+data/
+
 # Logs
 *.log
 logs/

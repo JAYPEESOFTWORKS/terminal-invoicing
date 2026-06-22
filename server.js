@@ -517,7 +517,18 @@ app.get("/api/invoices/:id/pdf-preview", wrap(async (req, res) => {
     items,
     totals:      { subtotal: total, tax: 0, total },
     layout:      invDef.layout || "default",
-    layoutConfig: {},
+    layoutConfig: {
+      font_size_base:     10,
+      font_size_header:   24,
+      font_size_metadata: 10,
+      line_height:        12,
+      item_row_height:    25,
+      primary_color:      "#000000",
+      text_color:         "#000000",
+      line_color:         "#000000",
+      font_family:        "Helvetica",
+      margins: { top: 72, bottom: 72, left: 72, right: 72 },
+    },
   };
 
   const tmpPath = path.join(os.tmpdir(), `ti-preview-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`);
