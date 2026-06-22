@@ -353,11 +353,11 @@ app.use("/api", requireAuth);
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 app.get("/api/config", wrap(async (req, res) => {
-  res.json({ company: cliConfig.getCompanyConfig(), email: cliConfig.getEmailConfig(), state: cliConfig.getState(), invoice_template: cliConfig.getEmailTemplate() });
+  res.json({ company: cliConfig.loadCompany(), email: cliConfig.loadEmail(), state: cliConfig.loadState(), invoice_template: cliConfig.loadEmailTemplate() });
 }));
-app.put("/api/config/company",  wrap(async (req, res) => { cliConfig.saveCompanyConfig(req.body);  res.json({ ok: true }); }));
-app.put("/api/config/email",    wrap(async (req, res) => { cliConfig.saveEmailConfig(req.body);    res.json({ ok: true }); }));
-app.put("/api/config/template", wrap(async (req, res) => { cliConfig.saveEmailTemplate(req.body); res.json({ ok: true }); }));
+app.put("/api/config/company",  wrap(async (req, res) => { cliConfig.saveCompany(req.body);  res.json({ ok: true }); }));
+app.put("/api/config/email",    wrap(async (req, res) => { cliConfig.saveEmail(req.body);    res.json({ ok: true }); }));
+app.put("/api/config/template", wrap(async (req, res) => { cliConfig.saveInvoiceTemplate(req.body); res.json({ ok: true }); }));
 app.put("/api/config/state",    wrap(async (req, res) => { cliConfig.saveState(req.body);          res.json({ ok: true }); }));
 
 // ─── Customers ────────────────────────────────────────────────────────────────
@@ -384,7 +384,7 @@ app.delete("/api/invoices/:id", wrap(async (req, res) => { if (!deleteYAMLFile("
 app.post("/api/invoices/:id/generate", wrap(async (req, res) => {
   const inv = readYAMLFile("invoices", req.params.id);
   if (!inv) return res.status(404).json({ error: "Invoice definition not found" });
-  const result = await invoiceProcessor.generate(inv, { dryRun: !!req.body.dryRun, noSend: !!req.body.noSend, preview: !!req.body.preview });
+  const result = await invoiceProcessor.processInvoice(inv, { dryRun: !!req.body.dryRun, noSend: !!req.body.noSend, preview: !!req.body.preview });
   res.json(result);
 }));
 
@@ -394,15 +394,30 @@ app.post  ("/api/schedule/setup", wrap(async (req, res) => { await cronManager.s
 app.delete("/api/schedule",       wrap(async (req, res) => { await cronManager.remove(); res.json({ ok: true }); }));
 
 // ─── History ──────────────────────────────────────────────────────────────────
-app.get("/api/history", wrap(async (req, res) => { res.json(readHistory()); }));
+app.get("/api/history", wrap(async (req, res) => {
+  const raw = await invoiceProcessor.listArchives();
+  // Normalize whatever shape listArchives() returns into what the UI expects
+  const normalized = (raw || []).map(a => ({
+    id:           a.invoice_number || a.id || a.number || path.basename(a.path || a.archive_path || "", ".zip"),
+    invoice_def:  a.invoice_id || a.invoice_def || "",
+    customer:     a.customer_name || a.customer || (typeof a.customer === "object" ? a.customer?.name : "") || "",
+    date:         a.invoice_date || a.date || "",
+    due:          a.due_date || a.due || "",
+    total:        a.total_amount || a.total || 0,
+    status:       a.status || "sent",
+    pdf:          a.pdf !== undefined ? a.pdf : true,
+    archive_path: a.path || a.archive_path || "",
+  }));
+  res.json(normalized);
+}));
 app.get("/api/history/:id/export", wrap(async (req, res) => {
-  const entry = readHistory().find(h => h.id === req.params.id);
-  if (!entry?.archive_path) return res.status(404).json({ error: "Not found" });
-  res.download(entry.archive_path, `${entry.id}.zip`);
+  const archive = await invoiceProcessor.findArchive(req.params.id);
+  if (!archive) return res.status(404).json({ error: "Not found" });
+  res.download(archive.path || archive.archive_path, `${req.params.id}.zip`);
 }));
 
 // ─── Email ────────────────────────────────────────────────────────────────────
-app.post("/api/email/test",     wrap(async (req, res) => { res.json(await emailManager.sendTest(req.body.to || cliConfig.getCompanyConfig().email)); }));
+app.post("/api/email/test",     wrap(async (req, res) => { res.json(await emailManager.sendTest(req.body.to || cliConfig.loadCompany().email)); }));
 app.get ("/api/email/providers",wrap(async (req, res) => { res.json(emailManager.listProviders()); }));
 
 // ─── Layouts ──────────────────────────────────────────────────────────────────

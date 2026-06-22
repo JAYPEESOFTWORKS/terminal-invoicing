@@ -12,9 +12,8 @@ const C = {
 // ─── API client ──────────────────────────────────────────────────────────────────────────────
 // When running via `node server.js` the UI is on the same origin so API_BASE="/api".
 // During Vite dev on a different port set VITE_API_URL=http://localhost:4000/api
-const API_BASE =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
-  "http://localhost:4000/api";
+// Safe in both ESM (Vite) and non-module (artifact/CRA) environments
+const API_BASE = "http://localhost:4000/api";
 
 async function apiFetch(method, path, body) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -1199,7 +1198,7 @@ function Schedule({ invoices, saveInvoice, scheduleSetup, scheduleRemove, custom
 function History({ history, customers, items: catalog, config, toast, onPreview }) {
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState(null);
-  const filtered = history.filter(h => h.id.toLowerCase().includes(filter.toLowerCase()) || h.customer.toLowerCase().includes(filter.toLowerCase()));
+  const filtered = history.filter(h => (h.id || "").toLowerCase().includes(filter.toLowerCase()) || (h.customer || h.customer_name || "").toLowerCase().includes(filter.toLowerCase()));
 
   // Build a synthetic invoice from a history entry for preview
   const buildPreviewInv = h => {
