@@ -159,7 +159,8 @@ function toYAML(obj, indent = 0) {
 }
 
 // ─── PDF Preview Canvas Renderer ───────────────────────────────────────────────
-function InvoicePDFPreview({ invoice, customer, lineItems, catalog, config, layout }) {
+// eslint-disable-next-line no-unused-vars
+function InvoicePDFPreview_UNUSED({ invoice, customer, lineItems, catalog, config, layout }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -411,20 +412,11 @@ function InvoicePDFPreview({ invoice, customer, lineItems, catalog, config, layo
 // ─── PDF Preview Panel ─────────────────────────────────────────────────────────
 function PDFPreview({ invoice, customers, items: catalog, config, onClose }) {
   const customer = customers.find(c => c.id === invoice?.customer_id);
-  const [layout, setLayout] = useState(invoice?.layout || "default");
-
-  const downloadSVG = () => {
-    const canvas = document.querySelector("canvas");
-    if (!canvas) return;
-    const link = document.createElement("a");
-    link.download = `${invoice?.id || "invoice"}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  };
+  const previewUrl = invoice?.id ? `/api/invoices/${invoice.id}/pdf-preview` : null;
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 1000, display: "flex" }} onClick={onClose}>
-      <div style={{ marginLeft: "auto", width: "min(700px, 95vw)", height: "100%", background: C.surface, borderLeft: `1px solid ${C.border}`, display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
+      <div style={{ marginLeft: "auto", width: "min(860px, 95vw)", height: "100%", background: C.surface, borderLeft: `1px solid ${C.border}`, display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
           <div>
@@ -432,25 +424,20 @@ function PDFPreview({ invoice, customers, items: catalog, config, onClose }) {
             <div style={{ fontSize: 12, color: C.muted, fontFamily: "monospace" }}>{invoice?.id || "new invoice"} · {customer?.name}</div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <select value={layout} onChange={e => setLayout(e.target.value)} style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.text, borderRadius: 6, padding: "5px 10px", fontSize: 12 }}>
-              {allLayouts.map(l => <option key={l.name} value={l.name}>{l.name}</option>)}
-            </select>
-            <button onClick={downloadSVG} style={{ background: C.accent, color: "#000", border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-              ↓ Download PNG
-            </button>
+            {previewUrl && (
+              <a href={previewUrl} download={`${invoice.id}.pdf`} style={{ background: C.accent, color: "#000", border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "none" }}>
+                ↓ Download PDF
+              </a>
+            )}
             <button onClick={onClose} style={{ background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 6, padding: "6px 10px", fontSize: 16, cursor: "pointer", lineHeight: 1 }}>×</button>
           </div>
         </div>
-        {/* Canvas */}
-        <div style={{ flex: 1, overflowY: "auto", padding: 20, background: "#555" }}>
-          <InvoicePDFPreview
-            invoice={invoice}
-            customer={customer}
-            lineItems={invoice?.items || []}
-            catalog={catalog}
-            config={config}
-            layout={layout}
-          />
+        {/* Real PDF in iframe */}
+        <div style={{ flex: 1, overflow: "hidden", background: "#555" }}>
+          {previewUrl
+            ? <iframe src={previewUrl} style={{ width: "100%", height: "100%", border: "none" }} title="Invoice PDF Preview" />
+            : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.muted, fontSize: 14 }}>No invoice selected</div>
+          }
         </div>
         {/* Footer meta */}
         <div style={{ padding: "12px 20px", borderTop: `1px solid ${C.border}`, display: "flex", gap: 20, flexShrink: 0 }}>
@@ -464,7 +451,7 @@ function PDFPreview({ invoice, customers, items: catalog, config, onClose }) {
           </div>
           <div style={{ fontSize: 11, color: C.muted }}>
             <span style={{ color: C.textDim }}>Layout: </span>
-            <span style={{ fontFamily: "monospace" }}>{layout}</span>
+            <span style={{ fontFamily: "monospace" }}>{invoice?.layout || "default"}</span>
           </div>
         </div>
       </div>

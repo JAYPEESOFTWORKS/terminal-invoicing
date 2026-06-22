@@ -436,6 +436,87 @@ app.get("/api/history/:id/export", wrap(async (req, res) => {
   res.download(archive.path, `${req.params.id}.zip`);
 }));
 
+// ─── PDF Preview (streams a real PDF using the CLI pdf-generator) ────────────
+app.get("/api/invoices/:id/pdf-preview", wrap(async (req, res) => {
+  const os      = require("os");
+  const { addDays } = require("date-fns");
+  const { formatDate } = require(path.join(__dirname, "src/utils/formatters"));
+  const pdfGenerator = require(path.join(__dirname, "src/lib/pdf-generator"));
+
+  const invDef = readYAMLFile("invoices", req.params.id);
+  if (!invDef) return res.status(404).json({ error: "Invoice not found" });
+
+  const customer = readYAMLFile("customers", invDef.customer_id);
+  if (!customer) return res.status(404).json({ error: "Customer not found" });
+
+  // Build items — FE format: [{item_id, qty}]; CLI format may be string IDs
+  const items = (invDef.items || []).map(li => {
+    const itemId  = (typeof li === "string") ? li : (li.item_id || li);
+    const qty     = (typeof li === "string") ? 1  : (li.qty || 1);
+    const catalog = readYAMLFile("items", itemId);
+    if (!catalog) return null;
+    // Support both FE (unit_price) and CLI (rate) field names
+    const rate    = catalog.unit_price ?? catalog.rate ?? 0;
+    const quantity = catalog.quantity || qty;
+    const amount  = rate * qty;
+    return {
+      type:        catalog.type || "service",
+      description: catalog.name || catalog.description || itemId,
+      detail:      catalog.detail || null,
+      quantity:    qty,
+      rate,
+      amount,
+    };
+  }).filter(Boolean);
+
+  const total = items.reduce((s, i) => s + i.amount, 0);
+
+  // Read raw company YAML (FE stores address/city_state_zip/phone, not info_lines)
+  const rawCompany = readYAMLFile("config", "company") || {};
+  const companyData = {
+    name:       rawCompany.name || "",
+    logo_path:  rawCompany.logo_path || "",
+    email:      rawCompany.email || "",
+    info_lines: [rawCompany.address, rawCompany.city_state_zip, rawCompany.phone, rawCompany.email].filter(Boolean),
+  };
+
+  const today   = new Date();
+  const dueDate = addDays(today, invDef.due_days || 30);
+
+  const invoiceData = {
+    company: companyData,
+    customer: {
+      name:          customer.name,
+      billing_email: customer.email || customer.billing_email || "",
+      info_lines:    [customer.address, customer.city_state_zip, customer.email].filter(Boolean),
+    },
+    invoice: {
+      number:        "PREVIEW",
+      date:          formatDate(today),
+      due_date:      formatDate(dueDate),
+      invoice_month: formatDate(today, "MMMM yyyy"),
+    },
+    items,
+    totals:      { subtotal: total, tax: 0, total },
+    layout:      invDef.layout || "default",
+    layoutConfig: {},
+  };
+
+  const tmpPath = path.join(os.tmpdir(), `ti-preview-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`);
+  try {
+    await pdfGenerator.generate(invoiceData, tmpPath);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="preview-${req.params.id}.pdf"`);
+    const stream = fs.createReadStream(tmpPath);
+    stream.pipe(res);
+    stream.on("end",   () => fs.unlink(tmpPath, () => {}));
+    stream.on("error", () => fs.unlink(tmpPath, () => {}));
+  } catch (err) {
+    fs.unlink(tmpPath, () => {});
+    throw err;
+  }
+}));
+
 // ─── Email ────────────────────────────────────────────────────────────────────
 app.post("/api/email/test",     wrap(async (req, res) => { res.json(await emailManager.sendTest(req.body.to || cliConfig.loadCompany().email)); }));
 app.get ("/api/email/providers",wrap(async (req, res) => { res.json(emailManager.listProviders()); }));
