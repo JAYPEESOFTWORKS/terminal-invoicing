@@ -384,7 +384,31 @@ app.delete("/api/invoices/:id", wrap(async (req, res) => { if (!deleteYAMLFile("
 app.post("/api/invoices/:id/generate", wrap(async (req, res) => {
   const inv = readYAMLFile("invoices", req.params.id);
   if (!inv) return res.status(404).json({ error: "Invoice definition not found" });
-  const result = await invoiceProcessor.processInvoice(req.params.id, { dryRun: !!req.body.dryRun, noSend: !!req.body.noSend, preview: !!req.body.preview });
+
+  const opts = { dryRun: !!req.body.dryRun, noSend: !!req.body.noSend, preview: !!req.body.preview };
+
+  // FE-format invoices have items as objects [{item_id, qty}] and no name field.
+  // The CLI processor requires items as string IDs and a name field.
+  // Write a normalised temp YAML, process it, then clean up.
+  const isFEFormat = Array.isArray(inv.items) && inv.items.length > 0 && typeof inv.items[0] === "object";
+  if (isFEFormat || !inv.name) {
+    const tempId = `_tmp_${req.params.id}`;
+    const normalised = {
+      ...inv,
+      name: inv.name || inv.id,
+      items: (inv.items || []).map(li => (typeof li === "string" ? li : (li.item_id || li))),
+    };
+    writeYAMLFile("invoices", tempId, normalised);
+    try {
+      const result = await invoiceProcessor.processInvoice(tempId, opts);
+      res.json(result);
+    } finally {
+      deleteYAMLFile("invoices", tempId);
+    }
+    return;
+  }
+
+  const result = await invoiceProcessor.processInvoice(req.params.id, opts);
   res.json(result);
 }));
 
